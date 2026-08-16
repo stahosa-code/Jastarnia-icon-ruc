@@ -1,3 +1,6 @@
+
+
+
 import math
 import os
 import tempfile
@@ -18,7 +21,7 @@ LON = 18.678
 BASE = "https://opendata.dwd.de/weather/nwp/v1/m/icon-d2-ruc/p"
 VARIABLES = ("U_10M", "V_10M", "VMAX_10M")
 WARSAW = ZoneInfo("Europe/Warsaw")
-USER_AGENT = "Jastarnia-ICON-D2-RUC/1.1"
+USER_AGENT = "Jastarnia-ICON-D2-RUC/1.2"
 
 
 def file_url(variable, run, lead):
@@ -47,8 +50,6 @@ def find_latest_complete_run():
         minute=0, second=0, microsecond=0
     )
 
-    # Wybieramy najnowszy przebieg, który ma komplet danych
-    # U10, V10 i porywów co najmniej do +14 h.
     for hours_back in range(0, 10):
         run = now - timedelta(hours=hours_back)
         if all(url_exists(file_url(var, run, 14)) for var in VARIABLES):
@@ -99,17 +100,12 @@ def read_values(grib_data):
 
 
 def grid_index_for_jastarnia(run):
-    # DWD podaje ICON-D2 RUC na oryginalnej siatce trójkątnej.
-    # Współrzędne komórek są dostępne jako osobne pola CLAT i CLON.
     clat = read_values(download(file_url("CLAT", run, 0)))
     clon = read_values(download(file_url("CLON", run, 0)))
 
     if len(clat) != len(clon):
         raise RuntimeError("CLAT i CLON mają różne rozmiary.")
 
-    # ICON zwykle przechowuje CLAT/CLON w radianach.
-    # Rozpoznajemy to po zakresie wartości i w razie potrzeby
-    # przeliczamy na stopnie.
     lat_is_radians = max(abs(float(x)) for x in clat[:1000]) <= math.pi + 0.1
     lon_is_radians = max(abs(float(x)) for x in clon[:1000]) <= 2 * math.pi + 0.1
 
@@ -128,7 +124,6 @@ def grid_index_for_jastarnia(run):
         if lon_is_radians:
             lo = math.degrees(lo)
 
-        # Ujednolicenie długości geograficznej do zakresu -180..180
         if lo > 180:
             lo -= 360
 
@@ -236,14 +231,15 @@ def main():
             }
         )
 
-        print(
-            valid_local.strftime("%d.%m %H:%M"),
-            f"{speed_kn:.1f} kn",
-            f"porywy {gust_kn:.1f} kn",
-            f"{direction} {degrees:.0f}°",
-        )
-
     generated = datetime.now(WARSAW)
+    current_hour = generated.replace(minute=0, second=0, microsecond=0)
+
+    # Pokazuj tylko godziny bieżące i przyszłe.
+    rows = [row for row in rows if row["time"] >= current_hour]
+
+    if not rows:
+        raise RuntimeError("Brak przyszłych godzin w aktualnym przebiegu.")
+
     run_local = run.astimezone(WARSAW)
 
     day_names = {
@@ -262,16 +258,31 @@ def main():
         t = row["time"]
         stamp = f"{day_names[t.weekday()]} {t:%d.%m %H:%M}"
 
+        # W kroku +0 h pole VMAX_10M bywa zerowe, bo nie ma jeszcze
+        # pełnego przedziału poprzedzającej godziny. Zamiast mylącego
+        # "0.0 kn" pokazujemy kreskę.
+        gust_text = "—" if row["gust"] <= 0.1 else f"{row['gust']:.1f} kn"
+
         table_rows.append(
             f"""
             <tr style="background:{row_color(row['speed'])}">
               <td>{stamp}</td>
               <td><b>{row['speed']:.1f}</b> kn</td>
-              <td>{row['gust']:.1f} kn</td>
+              <td>{gust_text}</td>
               <td>{row['direction']} {row['degrees']:.0f}°</td>
             </tr>
             """
         )
+
+    strongest_wind = max(rows, key=lambda r: r["speed"])
+    valid_gusts = [r for r in rows if r["gust"] > 0.1]
+    strongest_gust = max(valid_gusts, key=lambda r: r["gust"]) if valid_gusts else None
+
+    summary_gust = (
+        f"{strongest_gust['gust']:.1f} kn o {strongest_gust['time']:%H:%M}"
+        if strongest_gust
+        else "brak danych"
+    )
 
     html = f"""<!doctype html>
 <html lang="pl">
@@ -303,6 +314,10 @@ main {{ max-width:900px; margin:auto; padding:14px; }}
   box-shadow:0 2px 10px rgba(0,0,0,.10);
 }}
 .info {{ color:#5d6d7e; line-height:1.5; }}
+.summary {{
+  font-size:17px;
+  line-height:1.6;
+}}
 table {{
   width:100%;
   border-collapse:collapse;
@@ -342,6 +357,13 @@ footer {{
   <b>Punkt siatki:</b> {grid_lat:.4f}°N, {grid_lon:.4f}°E<br>
   <b>Aktualizacja strony:</b> {generated:%d.%m.%Y %H:%M}
 </div>
+
+<div class="card summary">
+  <b>Najsilniejszy wiatr:</b>
+  {strongest_wind['speed']:.1f} kn o {strongest_wind['time']:%H:%M}<br>
+  <b>Najsilniejsze porywy:</b> {summary_gust}
+</div>
+
 <div class="card" style="overflow-x:auto">
 <table>
 <thead>
