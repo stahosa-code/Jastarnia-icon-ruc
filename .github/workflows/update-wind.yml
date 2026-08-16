@@ -1,0 +1,46 @@
+name: Aktualizuj wiatr Jastarnia
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: "45 * * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  update-wind:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Pobierz repozytorium
+        uses: actions/checkout@v4
+
+      - name: Ustaw Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Zainstaluj biblioteki
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests numpy xarray cfgrib eccodes
+
+      - name: Pobierz ICON-D2 RUC i przygotuj prognozę
+        run: |
+          python update_wind.py
+
+      - name: Zapisz nową prognozę
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add wind.json
+
+          if git diff --cached --quiet; then
+            echo "Brak nowych danych."
+          else
+            git commit -m "Aktualizacja prognozy ICON-D2 RUC"
+            git push
+          fi
