@@ -1,6 +1,3 @@
-
-
-
 import math
 import os
 import tempfile
@@ -9,18 +6,19 @@ from zoneinfo import ZoneInfo
 
 import requests
 from eccodes import (
-    codes_grib_find_nearest,
+    codes_get_array,
     codes_grib_new_from_file,
     codes_release,
 )
 
+# Punkt na Zatoce Puckiej przy Jastarni
 LAT = 54.696
 LON = 18.678
 
 BASE = "https://opendata.dwd.de/weather/nwp/v1/m/icon-d2-ruc/p"
 VARIABLES = ("U_10M", "V_10M", "VMAX_10M")
 WARSAW = ZoneInfo("Europe/Warsaw")
-USER_AGENT = "Jastarnia-ICON-D2-RUC/1.0"
+USER_AGENT = "Jastarnia-ICON-D2-RUC/1.1"
 
 
 def file_url(variable, run, lead):
@@ -49,14 +47,15 @@ def find_latest_complete_run():
         minute=0, second=0, microsecond=0
     )
 
+    # Wybieramy najnowszy przebieg, który ma komplet danych
+    # U10, V10 i porywów co najmniej do +14 h.
     for hours_back in range(0, 10):
         run = now - timedelta(hours=hours_back)
         if all(url_exists(file_url(var, run, 14)) for var in VARIABLES):
             return run
 
     raise RuntimeError(
-        "Nie znaleziono kompletnego przebiegu ICON-D2 RUC "
-        "z prognozą do +14 h."
+        "Nie znaleziono kompletnego przebiegu ICON-D2 RUC do +14 h."
     )
 
 
@@ -70,7 +69,7 @@ def download(url):
     return response.content
 
 
-def nearest_value(grib_data):
+def read_values(grib_data):
     path = None
     gid = None
 
@@ -83,19 +82,10 @@ def nearest_value(grib_data):
 
         with open(path, "rb") as handle:
             gid = codes_grib_new_from_file(handle)
-
             if gid is None:
                 raise RuntimeError("Nie udało się odczytać pliku GRIB2.")
 
-            nearest = codes_grib_find_nearest(
-                gid, LAT, LON
-            )[0]
-
-            return (
-                float(nearest.value),
-                float(nearest.lat),
-                float(nearest.lon),
-            )
+            return codes_get_array(gid, "values")
 
     finally:
         if gid is not None:
@@ -106,6 +96,63 @@ def nearest_value(grib_data):
                 os.remove(path)
             except OSError:
                 pass
+
+
+def grid_index_for_jastarnia(run):
+    # DWD podaje ICON-D2 RUC na oryginalnej siatce trójkątnej.
+    # Współrzędne komórek są dostępne jako osobne pola CLAT i CLON.
+    clat = read_values(download(file_url("CLAT", run, 0)))
+    clon = read_values(download(file_url("CLON", run, 0)))
+
+    if len(clat) != len(clon):
+        raise RuntimeError("CLAT i CLON mają różne rozmiary.")
+
+    # ICON zwykle przechowuje CLAT/CLON w radianach.
+    # Rozpoznajemy to po zakresie wartości i w razie potrzeby
+    # przeliczamy na stopnie.
+    lat_is_radians = max(abs(float(x)) for x in clat[:1000]) <= math.pi + 0.1
+    lon_is_radians = max(abs(float(x)) for x in clon[:1000]) <= 2 * math.pi + 0.1
+
+    coslat = math.cos(math.radians(LAT))
+    best_i = None
+    best_d2 = float("inf")
+    best_lat = None
+    best_lon = None
+
+    for i, (la, lo) in enumerate(zip(clat, clon)):
+        la = float(la)
+        lo = float(lo)
+
+        if lat_is_radians:
+            la = math.degrees(la)
+        if lon_is_radians:
+            lo = math.degrees(lo)
+
+        # Ujednolicenie długości geograficznej do zakresu -180..180
+        if lo > 180:
+            lo -= 360
+
+        d2 = (la - LAT) ** 2 + ((lo - LON) * coslat) ** 2
+
+        if d2 < best_d2:
+            best_d2 = d2
+            best_i = i
+            best_lat = la
+            best_lon = lo
+
+    if best_i is None:
+        raise RuntimeError("Nie udało się znaleźć punktu siatki.")
+
+    return best_i, best_lat, best_lon
+
+
+def value_at_index(grib_data, index):
+    values = read_values(grib_data)
+    if index >= len(values):
+        raise RuntimeError(
+            f"Indeks {index} poza zakresem pola ({len(values)} punktów)."
+        )
+    return float(values[index])
 
 
 def ms_to_kn(value):
@@ -124,10 +171,7 @@ def wind_direction(u, v):
         "W", "WNW", "NW", "NNW",
     )
 
-    label = labels[
-        int((degrees + 11.25) // 22.5) % 16
-    ]
-
+    label = labels[int((degrees + 11.25) // 22.5) % 16]
     return degrees, label
 
 
@@ -149,28 +193,30 @@ def main():
         run.strftime("%Y-%m-%d %H:%M UTC"),
     )
 
+    grid_index, grid_lat, grid_lon = grid_index_for_jastarnia(run)
+
+    print(
+        "Najbliższy punkt siatki:",
+        f"{grid_lat:.4f}°N, {grid_lon:.4f}°E",
+        "indeks:",
+        grid_index,
+    )
+
     rows = []
-    grid_lat = None
-    grid_lon = None
 
     for lead in range(0, 15):
-        u, lat_u, lon_u = nearest_value(
-            download(file_url("U_10M", run, lead))
+        u = value_at_index(
+            download(file_url("U_10M", run, lead)),
+            grid_index,
         )
-        v, _, _ = nearest_value(
-            download(file_url("V_10M", run, lead))
+        v = value_at_index(
+            download(file_url("V_10M", run, lead)),
+            grid_index,
         )
-        gust, _, _ = nearest_value(
-            download(file_url("VMAX_10M", run, lead))
+        gust = value_at_index(
+            download(file_url("VMAX_10M", run, lead)),
+            grid_index,
         )
-
-        if grid_lat is None:
-            grid_lat = lat_u
-            grid_lon = lon_u
-            print(
-                "Najbliższy punkt siatki:",
-                f"{grid_lat:.4f}°N, {grid_lon:.4f}°E",
-            )
 
         speed_kn = ms_to_kn(math.hypot(u, v))
         gust_kn = ms_to_kn(gust)
@@ -214,10 +260,7 @@ def main():
 
     for row in rows:
         t = row["time"]
-        stamp = (
-            f"{day_names[t.weekday()]} "
-            f"{t:%d.%m %H:%M}"
-        )
+        stamp = f"{day_names[t.weekday()]} {t:%d.%m %H:%M}"
 
         table_rows.append(
             f"""
@@ -249,18 +292,9 @@ header {{
   padding:18px;
   text-align:center;
 }}
-header h1 {{
-  margin:0;
-  font-size:26px;
-}}
-header p {{
-  margin:6px 0 0;
-}}
-main {{
-  max-width:900px;
-  margin:auto;
-  padding:14px;
-}}
+header h1 {{ margin:0; font-size:26px; }}
+header p {{ margin:6px 0 0; }}
+main {{ max-width:900px; margin:auto; padding:14px; }}
 .card {{
   background:white;
   border-radius:14px;
@@ -268,10 +302,7 @@ main {{
   margin-bottom:14px;
   box-shadow:0 2px 10px rgba(0,0,0,.10);
 }}
-.info {{
-  color:#5d6d7e;
-  line-height:1.5;
-}}
+.info {{ color:#5d6d7e; line-height:1.5; }}
 table {{
   width:100%;
   border-collapse:collapse;
@@ -282,16 +313,9 @@ th,td {{
   border-bottom:1px solid #ddd;
   text-align:right;
 }}
-th {{
-  background:#1769aa;
-  color:white;
-}}
-th:first-child,td:first-child {{
-  text-align:left;
-}}
-th:last-child,td:last-child {{
-  text-align:center;
-}}
+th {{ background:#1769aa; color:white; }}
+th:first-child,td:first-child {{ text-align:left; }}
+th:last-child,td:last-child {{ text-align:center; }}
 footer {{
   text-align:center;
   padding:18px;
@@ -301,10 +325,7 @@ footer {{
 @media (max-width:600px) {{
   main {{ padding:8px; }}
   .card {{ padding:10px; }}
-  th,td {{
-    padding:9px 5px;
-    font-size:14px;
-  }}
+  th,td {{ padding:9px 5px; font-size:14px; }}
 }}
 </style>
 </head>
