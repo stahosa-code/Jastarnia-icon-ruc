@@ -2,6 +2,7 @@ import bz2
 import math
 import os
 import tempfile
+from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -17,15 +18,14 @@ LAT = 54.696
 LON = 18.678
 
 WARSAW = ZoneInfo("Europe/Warsaw")
-USER_AGENT = "Jastarnia-ICON-D2/2.0"
+USER_AGENT = "Jastarnia-ICON-D2/3.0"
 
 # ICON-D2 RUC – najbliższe ~14 h
 RUC_BASE = "https://opendata.dwd.de/weather/nwp/v1/m/icon-d2-ruc/p"
 RUC_VARS = ("U_10M", "V_10M", "VMAX_10M")
 
-# Klasyczny ICON-D2 – do +48 h
+# Klasyczny ICON-D2 – dalszy horyzont do +48 h
 D2_BASE = "https://opendata.dwd.de/weather/nwp/icon-d2/grib"
-D2_VARS = ("u_10m", "v_10m", "vmax_10m")
 
 
 def head_ok(url):
@@ -49,9 +49,7 @@ def get_bytes(url, compressed_bz2=False):
     )
     r.raise_for_status()
     data = r.content
-    if compressed_bz2:
-        data = bz2.decompress(data)
-    return data
+    return bz2.decompress(data) if compressed_bz2 else data
 
 
 def read_values(grib_data):
@@ -119,14 +117,50 @@ def wind_direction(u, v):
     return degrees, label
 
 
-def row_color(speed_kn):
-    if speed_kn >= 22:
-        return "#ffe5e5"
-    if speed_kn >= 16:
-        return "#fff0c7"
-    if speed_kn >= 10:
-        return "#e9f8df"
-    return "#ffffff"
+def speed_class(speed_kn):
+    if speed_kn < 8:
+        return "calm"
+    if speed_kn < 12:
+        return "light"
+    if speed_kn < 16:
+        return "good"
+    if speed_kn < 20:
+        return "strong"
+    if speed_kn < 24:
+        return "very-strong"
+    return "hard"
+
+
+def speed_badge(speed_kn):
+    if speed_kn < 8:
+        label = "słabo"
+    elif speed_kn < 12:
+        label = "lekko"
+    elif speed_kn < 16:
+        label = "dobrze"
+    elif speed_kn < 20:
+        label = "mocno"
+    elif speed_kn < 24:
+        label = "bardzo mocno"
+    else:
+        label = "bardzo silnie"
+    return label
+
+
+def day_label(dt, today):
+    d = dt.date()
+    if d == today:
+        return "Dzisiaj"
+    if d == today + timedelta(days=1):
+        return "Jutro"
+    if d == today + timedelta(days=2):
+        return "Pojutrze"
+
+    weekdays = (
+        "Poniedziałek", "Wtorek", "Środa", "Czwartek",
+        "Piątek", "Sobota", "Niedziela"
+    )
+    return weekdays[dt.weekday()]
 
 
 # ---------------- RUC ----------------
@@ -163,6 +197,7 @@ def ruc_grid_index(run):
     for i, (la, lo) in enumerate(zip(clat, clon)):
         la = float(la)
         lo = float(lo)
+
         if lat_is_rad:
             la = math.degrees(la)
         if lon_is_rad:
@@ -176,6 +211,9 @@ def ruc_grid_index(run):
             best_i = i
             best_lat = la
             best_lon = lo
+
+    if best_i is None:
+        raise RuntimeError("Nie udało się znaleźć punktu siatki RUC.")
 
     return best_i, best_lat, best_lon
 
@@ -220,7 +258,7 @@ def d2_url(variable, run, lead):
 
 def find_latest_d2_run():
     now = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
-    valid_hours = (0, 6, 9, 12, 15, 18, 21)
+    valid_hours = (0, 3, 6, 9, 12, 15, 18, 21)
 
     candidates = []
     for back in range(0, 30):
@@ -229,7 +267,6 @@ def find_latest_d2_run():
             candidates.append(candidate)
 
     for run in candidates:
-        # Do wykrycia kompletnego przebiegu wystarczy sprawdzić wiatr na +48 h.
         if head_ok(d2_url("u_10m", run, 48)) and head_ok(d2_url("v_10m", run, 48)):
             return run
 
@@ -247,6 +284,7 @@ def nearest_regular_grid_index(grib_data):
     for i, (la, lo) in enumerate(zip(lats, lons)):
         la = float(la)
         lo = float(lo)
+
         if lo > 180:
             lo -= 360
 
@@ -256,6 +294,9 @@ def nearest_regular_grid_index(grib_data):
             best_i = i
             best_lat = la
             best_lon = lo
+
+    if best_i is None:
+        raise RuntimeError("Nie udało się znaleźć punktu siatki ICON-D2.")
 
     return best_i, best_lat, best_lon, values
 
@@ -271,7 +312,6 @@ def d2_rows(after_time):
     for lead in range(0, 49):
         valid_local = (run + timedelta(hours=lead)).astimezone(WARSAW)
 
-        # Klasyczny ICON-D2 pokazujemy dopiero po końcu RUC.
         if valid_local <= after_time:
             continue
 
@@ -295,49 +335,94 @@ def d2_rows(after_time):
     return run, grid_lat, grid_lon, rows
 
 
-def make_table(rows):
-    day_names = {
-        0: "pon.", 1: "wt.", 2: "śr.", 3: "czw.",
-        4: "pt.", 5: "sob.", 6: "niedz.",
-    }
+# ---------------- HTML ----------------
 
+def make_rows(rows):
     out = []
+
     for row in rows:
         t = row["time"]
-        stamp = f"{day_names[t.weekday()]} {t:%d.%m %H:%M}"
-        gust_text = "—" if row["gust"] <= 0.1 else f"{row['gust']:.1f} kn"
+        cls = speed_class(row["speed"])
+        gust_text = "—" if row["gust"] <= 0.1 else f"{row['gust']:.1f}"
 
         out.append(
             f"""
-            <tr style="background:{row_color(row['speed'])}">
-              <td>{stamp}</td>
-              <td><b>{row['speed']:.1f}</b> kn</td>
-              <td>{gust_text}</td>
-              <td>{row['direction']} {row['degrees']:.0f}°</td>
+            <tr class="{cls}">
+              <td class="time">{t:%H:%M}</td>
+              <td class="wind">
+                <span class="wind-number">{row['speed']:.1f}</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">{gust_text}</span>
+                <span class="unit">{'' if gust_text == '—' else 'kn'}</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">{row['direction']}</span>
+                <span class="deg">{row['degrees']:.0f}°</span>
+              </td>
             </tr>
             """
         )
+
     return "".join(out)
 
 
-def summary(rows):
+def day_summary(rows):
     if not rows:
-        return "Brak danych."
+        return ""
 
-    strongest_wind = max(rows, key=lambda r: r["speed"])
-    gust_rows = [r for r in rows if r["gust"] > 0.1]
-    strongest_gust = max(gust_rows, key=lambda r: r["gust"]) if gust_rows else None
+    strongest = max(rows, key=lambda r: r["speed"])
+    gusts = [r for r in rows if r["gust"] > 0.1]
+    max_gust = max(gusts, key=lambda r: r["gust"]) if gusts else None
+
+    avg = sum(r["speed"] for r in rows) / len(rows)
 
     gust_text = (
-        f"{strongest_gust['gust']:.1f} kn o {strongest_gust['time']:%H:%M}"
-        if strongest_gust else "brak danych"
+        f"{max_gust['gust']:.1f} kn o {max_gust['time']:%H:%M}"
+        if max_gust else "brak"
     )
 
     return (
-        f"<b>Najsilniejszy wiatr:</b> "
-        f"{strongest_wind['speed']:.1f} kn o {strongest_wind['time']:%H:%M}<br>"
-        f"<b>Najsilniejsze porywy:</b> {gust_text}"
+        f"""
+        <div class="day-stats">
+          <div><span>Średnio</span><b>{avg:.1f} kn</b></div>
+          <div><span>Maks. wiatr</span><b>{strongest['speed']:.1f} kn · {strongest['time']:%H:%M}</b></div>
+          <div><span>Maks. poryw</span><b>{gust_text}</b></div>
+        </div>
+        """
     )
+
+
+def section_html(label, date_text, rows):
+    return f"""
+    <section class="day-card">
+      <div class="day-header">
+        <div>
+          <h2>{label}</h2>
+          <div class="date">{date_text}</div>
+        </div>
+      </div>
+
+      {day_summary(rows)}
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Godz.</th>
+              <th>Wiatr</th>
+              <th>Porywy</th>
+              <th>Kierunek</th>
+            </tr>
+          </thead>
+          <tbody>
+            {make_rows(rows)}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    """
 
 
 def main():
@@ -355,6 +440,31 @@ def main():
     d2_run, d2_lat, d2_lon, d2 = d2_rows(ruc_end)
     d2 = [r for r in d2 if r["time"] >= current_hour]
 
+    all_rows = sorted(ruc + d2, key=lambda r: r["time"])
+
+    grouped = defaultdict(list)
+    for row in all_rows:
+        grouped[row["time"].date()].append(row)
+
+    today = generated.date()
+    sections = []
+
+    for day in sorted(grouped):
+        rows = grouped[day]
+        first = rows[0]["time"]
+        label = day_label(first, today)
+        date_text = first.strftime("%d.%m.%Y")
+        sections.append(section_html(label, date_text, rows))
+
+    strongest = max(all_rows, key=lambda r: r["speed"])
+    gust_rows = [r for r in all_rows if r["gust"] > 0.1]
+    strongest_gust = max(gust_rows, key=lambda r: r["gust"]) if gust_rows else None
+
+    overall_gust = (
+        f"{strongest_gust['gust']:.1f} kn · {strongest_gust['time']:%a %H:%M}"
+        if strongest_gust else "brak"
+    )
+
     ruc_run_local = ruc_run.astimezone(WARSAW)
     d2_run_local = d2_run.astimezone(WARSAW)
 
@@ -363,104 +473,312 @@ def main():
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Jastarnia – ICON-D2</title>
+<title>Jastarnia – wiatr</title>
 <style>
+:root {{
+  --blue:#0f67ad;
+  --blue-dark:#084d84;
+  --bg:#edf2f6;
+  --card:#ffffff;
+  --text:#17202a;
+  --muted:#667482;
+
+  --c-calm:#eef2f5;
+  --c-light:#e5f5ef;
+  --c-good:#dff4cf;
+  --c-strong:#fff0b8;
+  --c-vstrong:#ffd79a;
+  --c-hard:#ffb4ad;
+}}
+
+* {{ box-sizing:border-box; }}
+
 body {{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
-  margin:0; background:#f3f6f9; color:#17202a;
 }}
+
 header {{
-  background:#1769aa; color:white; padding:18px; text-align:center;
+  background:linear-gradient(135deg,var(--blue-dark),var(--blue));
+  color:white;
+  padding:20px 14px 18px;
+  box-shadow:0 2px 10px rgba(0,0,0,.18);
 }}
-header h1 {{ margin:0; font-size:26px; }}
-header p {{ margin:6px 0 0; }}
-main {{ max-width:900px; margin:auto; padding:14px; }}
-.card {{
-  background:white; border-radius:14px; padding:16px;
-  margin-bottom:14px; box-shadow:0 2px 10px rgba(0,0,0,.10);
+
+.header-inner {{
+  max-width:920px;
+  margin:auto;
 }}
-.info {{ color:#5d6d7e; line-height:1.5; }}
-.summary {{ font-size:17px; line-height:1.6; }}
-.section-title {{ margin:4px 0 10px; }}
-.badge {{
-  display:inline-block; padding:4px 9px; border-radius:999px;
-  font-size:12px; font-weight:700; background:#e8f1fb; color:#1769aa;
+
+header h1 {{
+  margin:0;
+  font-size:28px;
+  line-height:1.15;
 }}
+
+header p {{
+  margin:6px 0 0;
+  opacity:.92;
+}}
+
+main {{
+  max-width:920px;
+  margin:auto;
+  padding:12px;
+}}
+
+.hero {{
+  background:var(--card);
+  border-radius:16px;
+  padding:15px;
+  margin-bottom:12px;
+  box-shadow:0 2px 12px rgba(0,0,0,.08);
+}}
+
+.hero-grid {{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+}}
+
+.hero-box {{
+  border-radius:12px;
+  padding:12px;
+  background:#f6f8fa;
+}}
+
+.hero-box span {{
+  display:block;
+  color:var(--muted);
+  font-size:12px;
+  margin-bottom:5px;
+}}
+
+.hero-box b {{
+  font-size:17px;
+}}
+
+.meta {{
+  margin-top:12px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.55;
+}}
+
+.legend {{
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  margin-top:12px;
+}}
+
+.legend span {{
+  padding:5px 8px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
+}}
+
+.day-card {{
+  background:var(--card);
+  border-radius:16px;
+  margin-bottom:14px;
+  overflow:hidden;
+  box-shadow:0 2px 12px rgba(0,0,0,.08);
+}}
+
+.day-header {{
+  padding:15px 15px 9px;
+  border-bottom:1px solid #e5e9ed;
+}}
+
+.day-header h2 {{
+  margin:0;
+  font-size:24px;
+}}
+
+.date {{
+  color:var(--muted);
+  margin-top:2px;
+  font-size:14px;
+}}
+
+.day-stats {{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:1px;
+  background:#e5e9ed;
+  border-bottom:1px solid #e5e9ed;
+}}
+
+.day-stats div {{
+  background:#f8fafb;
+  padding:10px 12px;
+}}
+
+.day-stats span {{
+  display:block;
+  color:var(--muted);
+  font-size:11px;
+  margin-bottom:3px;
+}}
+
+.day-stats b {{
+  font-size:14px;
+}}
+
+.table-wrap {{
+  overflow-x:auto;
+}}
+
 table {{
-  width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums;
+  width:100%;
+  border-collapse:collapse;
+  min-width:560px;
+  font-variant-numeric:tabular-nums;
 }}
-th,td {{
-  padding:11px 8px; border-bottom:1px solid #ddd; text-align:right;
+
+th {{
+  background:var(--blue);
+  color:white;
+  padding:10px 9px;
+  font-size:13px;
+  text-align:right;
+  position:sticky;
+  top:0;
 }}
-th {{ background:#1769aa; color:white; }}
-th:first-child,td:first-child {{ text-align:left; }}
-th:last-child,td:last-child {{ text-align:center; }}
+
+th:first-child {{
+  text-align:left;
+}}
+
+td {{
+  padding:10px 9px;
+  border-bottom:1px solid rgba(0,0,0,.075);
+  text-align:right;
+}}
+
+td.time {{
+  text-align:left;
+  font-weight:700;
+  width:90px;
+}}
+
+.wind-number {{
+  font-size:18px;
+  font-weight:800;
+}}
+
+.gust-number {{
+  font-weight:700;
+}}
+
+.unit {{
+  font-size:11px;
+  color:#5d6872;
+  margin-left:2px;
+}}
+
+.dir-main {{
+  font-weight:800;
+}}
+
+.deg {{
+  color:#5d6872;
+  margin-left:4px;
+}}
+
+tr.calm {{ background:var(--c-calm); }}
+tr.light {{ background:var(--c-light); }}
+tr.good {{ background:var(--c-good); }}
+tr.strong {{ background:var(--c-strong); }}
+tr.very-strong {{ background:var(--c-vstrong); }}
+tr.hard {{ background:var(--c-hard); }}
+
 footer {{
-  text-align:center; padding:18px; color:#687078; font-size:13px;
+  color:var(--muted);
+  text-align:center;
+  font-size:12px;
+  padding:8px 12px 24px;
 }}
-@media (max-width:600px) {{
+
+@media (max-width:680px) {{
+  header h1 {{ font-size:24px; }}
   main {{ padding:8px; }}
-  .card {{ padding:10px; }}
-  th,td {{ padding:9px 5px; font-size:14px; }}
+
+  .hero-grid {{
+    grid-template-columns:1fr;
+  }}
+
+  .day-stats {{
+    grid-template-columns:1fr;
+  }}
+
+  .day-header h2 {{
+    font-size:22px;
+  }}
+
+  td {{
+    padding:9px 7px;
+  }}
 }}
 </style>
 </head>
+
 <body>
+
 <header>
-  <h1>🌬️ Jastarnia – ICON-D2</h1>
-  <p>Prognoza wiatru dla Zatoki Puckiej</p>
+  <div class="header-inner">
+    <h1>🌬️ Jastarnia – prognoza wiatru</h1>
+    <p>ICON-D2 RUC + ICON-D2 · Zatoka Pucka</p>
+  </div>
 </header>
 
 <main>
 
-<div class="card info">
-  <b>Punkt docelowy:</b> {LAT:.3f}°N, {LON:.3f}°E<br>
-  <b>Aktualizacja strony:</b> {generated:%d.%m.%Y %H:%M}<br><br>
+<div class="hero">
+  <div class="hero-grid">
+    <div class="hero-box">
+      <span>Najsilniejszy wiatr</span>
+      <b>{strongest['speed']:.1f} kn · {strongest['time']:%H:%M}</b>
+    </div>
+    <div class="hero-box">
+      <span>Najsilniejszy poryw</span>
+      <b>{overall_gust}</b>
+    </div>
+    <div class="hero-box">
+      <span>Aktualizacja</span>
+      <b>{generated:%H:%M}</b>
+    </div>
+  </div>
 
-  <span class="badge">RUC</span>
-  przebieg {ruc_run_local:%d.%m %H:%M},
-  punkt siatki {ruc_lat:.4f}°N, {ruc_lon:.4f}°E<br>
+  <div class="legend">
+    <span style="background:var(--c-calm)">0–8 kn</span>
+    <span style="background:var(--c-light)">8–12 kn</span>
+    <span style="background:var(--c-good)">12–16 kn</span>
+    <span style="background:var(--c-strong)">16–20 kn</span>
+    <span style="background:var(--c-vstrong)">20–24 kn</span>
+    <span style="background:var(--c-hard)">24+ kn</span>
+  </div>
 
-  <span class="badge">ICON-D2</span>
-  przebieg {d2_run_local:%d.%m %H:%M},
-  punkt siatki {d2_lat:.4f}°N, {d2_lon:.4f}°E
+  <div class="meta">
+    <b>RUC:</b> przebieg {ruc_run_local:%d.%m %H:%M},
+    punkt siatki {ruc_lat:.4f}°N, {ruc_lon:.4f}°E<br>
+    <b>ICON-D2:</b> przebieg {d2_run_local:%d.%m %H:%M},
+    punkt siatki {d2_lat:.4f}°N, {d2_lon:.4f}°E
+  </div>
 </div>
 
-<div class="card summary">
-  <h2 class="section-title">Najbliższe godziny · ICON-D2 RUC</h2>
-  {summary(ruc)}
-</div>
-
-<div class="card" style="overflow-x:auto">
-  <h2 class="section-title">ICON-D2 RUC · do +14 h</h2>
-  <table>
-    <thead>
-      <tr><th>Godzina</th><th>Wiatr</th><th>Porywy</th><th>Kierunek</th></tr>
-    </thead>
-    <tbody>{make_table(ruc)}</tbody>
-  </table>
-</div>
-
-<div class="card summary">
-  <h2 class="section-title">Dalsza prognoza · ICON-D2</h2>
-  {summary(d2)}
-</div>
-
-<div class="card" style="overflow-x:auto">
-  <h2 class="section-title">ICON-D2 · dalszy horyzont do +48 h</h2>
-  <table>
-    <thead>
-      <tr><th>Godzina</th><th>Wiatr</th><th>Porywy</th><th>Kierunek</th></tr>
-    </thead>
-    <tbody>{make_table(d2)}</tbody>
-  </table>
-</div>
+{''.join(sections)}
 
 </main>
 
 <footer>
-Dane: Deutscher Wetterdienst (DWD) · ICON-D2 RUC + ICON-D2
+  Dane: Deutscher Wetterdienst (DWD) · punkt docelowy {LAT:.3f}°N, {LON:.3f}°E
 </footer>
+
 </body>
 </html>
 """
@@ -468,7 +786,7 @@ Dane: Deutscher Wetterdienst (DWD) · ICON-D2 RUC + ICON-D2
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(html)
 
-    print("Gotowe: zapisano index.html z RUC i ICON-D2.")
+    print("Gotowe: zapisano czytelną wersję index.html.")
 
 
 if __name__ == "__main__":
