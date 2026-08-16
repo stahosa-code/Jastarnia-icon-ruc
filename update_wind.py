@@ -131,6 +131,20 @@ def speed_class(speed_kn):
     return "hard"
 
 
+def gust_class(gust_kn):
+    if gust_kn <= 0.1:
+        return "gust-none"
+    if gust_kn < 12:
+        return "gust-light"
+    if gust_kn < 16:
+        return "gust-good"
+    if gust_kn < 20:
+        return "gust-strong"
+    if gust_kn < 24:
+        return "gust-vstrong"
+    return "gust-hard"
+
+
 def speed_badge(speed_kn):
     if speed_kn < 8:
         label = "słabo"
@@ -343,7 +357,17 @@ def make_rows(rows):
     for row in rows:
         t = row["time"]
         cls = speed_class(row["speed"])
-        gust_text = "—" if row["gust"] <= 0.1 else f"{row['gust']:.1f}"
+        gcls = gust_class(row["gust"])
+
+        if row["gust"] <= 0.1:
+            gust_html = '<span class="gust-number">—</span>'
+        else:
+            delta = row["gust"] - row["speed"]
+            gust_html = (
+                f'<span class="gust-number">{row["gust"]:.1f}</span> '
+                f'<span class="unit">kn</span>'
+                f'<span class="delta">+{delta:.1f}</span>'
+            )
 
         out.append(
             f"""
@@ -353,9 +377,8 @@ def make_rows(rows):
                 <span class="wind-number">{row['speed']:.1f}</span>
                 <span class="unit">kn</span>
               </td>
-              <td class="gust">
-                <span class="gust-number">{gust_text}</span>
-                <span class="unit">{'' if gust_text == '—' else 'kn'}</span>
+              <td class="gust {gcls}">
+                {gust_html}
               </td>
               <td class="dir">
                 <span class="dir-main">{row['direction']}</span>
@@ -660,6 +683,45 @@ td {{
   text-align:right;
 }}
 
+td.gust {{
+  font-weight:700;
+}}
+
+td.gust-none {{
+  background:rgba(238,242,245,.78);
+}}
+
+td.gust-light {{
+  background:rgba(229,245,239,.90);
+}}
+
+td.gust-good {{
+  background:rgba(223,244,207,.92);
+}}
+
+td.gust-strong {{
+  background:rgba(255,240,184,.95);
+}}
+
+td.gust-vstrong {{
+  background:rgba(255,215,154,.96);
+}}
+
+td.gust-hard {{
+  background:rgba(255,180,173,.96);
+}}
+
+.delta {{
+  display:inline-block;
+  margin-left:6px;
+  padding:2px 5px;
+  border-radius:999px;
+  background:rgba(255,255,255,.72);
+  color:#4c5964;
+  font-size:11px;
+  font-weight:800;
+}}
+
 td.time {{
   text-align:left;
   font-weight:700;
@@ -761,6 +823,10 @@ footer {{
     <span style="background:var(--c-strong)">16–20 kn</span>
     <span style="background:var(--c-vstrong)">20–24 kn</span>
     <span style="background:var(--c-hard)">24+ kn</span>
+  </div>
+  <div class="meta" style="margin-top:8px">
+    Kolor całego wiersza = wiatr średni. Kolor pola „Porywy” = siła porywu.
+    Liczba w nawiasie oznacza, o ile poryw jest mocniejszy od średniego wiatru.
   </div>
 
   <div class="meta">
