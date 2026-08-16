@@ -3,432 +3,1162 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Jastarnia – ICON-D2</title>
+<title>Jastarnia – wiatr</title>
 <style>
+:root {
+  --blue:#0f67ad;
+  --blue-dark:#084d84;
+  --bg:#edf2f6;
+  --card:#ffffff;
+  --text:#17202a;
+  --muted:#667482;
+
+  --c-calm:#eef2f5;
+  --c-light:#e5f5ef;
+  --c-good:#dff4cf;
+  --c-strong:#fff0b8;
+  --c-vstrong:#ffd79a;
+  --c-hard:#ffb4ad;
+}
+
+* { box-sizing:border-box; }
+
 body {
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;
-  margin:0; background:#f3f6f9; color:#17202a;
 }
+
 header {
-  background:#1769aa; color:white; padding:18px; text-align:center;
+  background:linear-gradient(135deg,var(--blue-dark),var(--blue));
+  color:white;
+  padding:20px 14px 18px;
+  box-shadow:0 2px 10px rgba(0,0,0,.18);
 }
-header h1 { margin:0; font-size:26px; }
-header p { margin:6px 0 0; }
-main { max-width:900px; margin:auto; padding:14px; }
-.card {
-  background:white; border-radius:14px; padding:16px;
-  margin-bottom:14px; box-shadow:0 2px 10px rgba(0,0,0,.10);
+
+.header-inner {
+  max-width:920px;
+  margin:auto;
 }
-.info { color:#5d6d7e; line-height:1.5; }
-.summary { font-size:17px; line-height:1.6; }
-.section-title { margin:4px 0 10px; }
-.badge {
-  display:inline-block; padding:4px 9px; border-radius:999px;
-  font-size:12px; font-weight:700; background:#e8f1fb; color:#1769aa;
+
+header h1 {
+  margin:0;
+  font-size:28px;
+  line-height:1.15;
 }
+
+header p {
+  margin:6px 0 0;
+  opacity:.92;
+}
+
+main {
+  max-width:920px;
+  margin:auto;
+  padding:12px;
+}
+
+.hero {
+  background:var(--card);
+  border-radius:16px;
+  padding:15px;
+  margin-bottom:12px;
+  box-shadow:0 2px 12px rgba(0,0,0,.08);
+}
+
+.hero-grid {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+}
+
+.hero-box {
+  border-radius:12px;
+  padding:12px;
+  background:#f6f8fa;
+}
+
+.hero-box span {
+  display:block;
+  color:var(--muted);
+  font-size:12px;
+  margin-bottom:5px;
+}
+
+.hero-box b {
+  font-size:17px;
+}
+
+.meta {
+  margin-top:12px;
+  color:var(--muted);
+  font-size:13px;
+  line-height:1.55;
+}
+
+.legend {
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  margin-top:12px;
+}
+
+.legend span {
+  padding:5px 8px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:700;
+}
+
+.day-card {
+  background:var(--card);
+  border-radius:16px;
+  margin-bottom:14px;
+  overflow:hidden;
+  box-shadow:0 2px 12px rgba(0,0,0,.08);
+}
+
+.day-header {
+  padding:15px 15px 9px;
+  border-bottom:1px solid #e5e9ed;
+}
+
+.day-header h2 {
+  margin:0;
+  font-size:24px;
+}
+
+.date {
+  color:var(--muted);
+  margin-top:2px;
+  font-size:14px;
+}
+
+.day-stats {
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:1px;
+  background:#e5e9ed;
+  border-bottom:1px solid #e5e9ed;
+}
+
+.day-stats div {
+  background:#f8fafb;
+  padding:10px 12px;
+}
+
+.day-stats span {
+  display:block;
+  color:var(--muted);
+  font-size:11px;
+  margin-bottom:3px;
+}
+
+.day-stats b {
+  font-size:14px;
+}
+
+.table-wrap {
+  overflow-x:auto;
+}
+
 table {
-  width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums;
+  width:100%;
+  border-collapse:collapse;
+  min-width:560px;
+  font-variant-numeric:tabular-nums;
 }
-th,td {
-  padding:11px 8px; border-bottom:1px solid #ddd; text-align:right;
+
+th {
+  background:var(--blue);
+  color:white;
+  padding:10px 9px;
+  font-size:13px;
+  text-align:right;
+  position:sticky;
+  top:0;
 }
-th { background:#1769aa; color:white; }
-th:first-child,td:first-child { text-align:left; }
-th:last-child,td:last-child { text-align:center; }
+
+th:first-child {
+  text-align:left;
+}
+
+td {
+  padding:10px 9px;
+  border-bottom:1px solid rgba(0,0,0,.075);
+  text-align:right;
+}
+
+td.time {
+  text-align:left;
+  font-weight:700;
+  width:90px;
+}
+
+.wind-number {
+  font-size:18px;
+  font-weight:800;
+}
+
+.gust-number {
+  font-weight:700;
+}
+
+.unit {
+  font-size:11px;
+  color:#5d6872;
+  margin-left:2px;
+}
+
+.dir-main {
+  font-weight:800;
+}
+
+.deg {
+  color:#5d6872;
+  margin-left:4px;
+}
+
+tr.calm { background:var(--c-calm); }
+tr.light { background:var(--c-light); }
+tr.good { background:var(--c-good); }
+tr.strong { background:var(--c-strong); }
+tr.very-strong { background:var(--c-vstrong); }
+tr.hard { background:var(--c-hard); }
+
 footer {
-  text-align:center; padding:18px; color:#687078; font-size:13px;
+  color:var(--muted);
+  text-align:center;
+  font-size:12px;
+  padding:8px 12px 24px;
 }
-@media (max-width:600px) {
+
+@media (max-width:680px) {
+  header h1 { font-size:24px; }
   main { padding:8px; }
-  .card { padding:10px; }
-  th,td { padding:9px 5px; font-size:14px; }
+
+  .hero-grid {
+    grid-template-columns:1fr;
+  }
+
+  .day-stats {
+    grid-template-columns:1fr;
+  }
+
+  .day-header h2 {
+    font-size:22px;
+  }
+
+  td {
+    padding:9px 7px;
+  }
 }
 </style>
 </head>
+
 <body>
+
 <header>
-  <h1>🌬️ Jastarnia – ICON-D2</h1>
-  <p>Prognoza wiatru dla Zatoki Puckiej</p>
+  <div class="header-inner">
+    <h1>🌬️ Jastarnia – prognoza wiatru</h1>
+    <p>ICON-D2 RUC + ICON-D2 · Zatoka Pucka</p>
+  </div>
 </header>
 
 <main>
 
-<div class="card info">
-  <b>Punkt docelowy:</b> 54.696°N, 18.678°E<br>
-  <b>Aktualizacja strony:</b> 16.08.2026 13:14<br><br>
+<div class="hero">
+  <div class="hero-grid">
+    <div class="hero-box">
+      <span>Najsilniejszy wiatr</span>
+      <b>18.6 kn · 17:00</b>
+    </div>
+    <div class="hero-box">
+      <span>Najsilniejszy poryw</span>
+      <b>28.5 kn · Sun 17:00</b>
+    </div>
+    <div class="hero-box">
+      <span>Aktualizacja</span>
+      <b>13:27</b>
+    </div>
+  </div>
 
-  <span class="badge">RUC</span>
-  przebieg 16.08 12:00,
-  punkt siatki 54.7035°N, 18.6655°E<br>
+  <div class="legend">
+    <span style="background:var(--c-calm)">0–8 kn</span>
+    <span style="background:var(--c-light)">8–12 kn</span>
+    <span style="background:var(--c-good)">12–16 kn</span>
+    <span style="background:var(--c-strong)">16–20 kn</span>
+    <span style="background:var(--c-vstrong)">20–24 kn</span>
+    <span style="background:var(--c-hard)">24+ kn</span>
+  </div>
 
-  <span class="badge">ICON-D2</span>
-  przebieg 16.08 11:00,
-  punkt siatki 54.7000°N, 18.6800°E
+  <div class="meta">
+    <b>RUC:</b> przebieg 16.08 12:00,
+    punkt siatki 54.7035°N, 18.6655°E<br>
+    <b>ICON-D2:</b> przebieg 16.08 11:00,
+    punkt siatki 54.7000°N, 18.6800°E
+  </div>
 </div>
 
-<div class="card summary">
-  <h2 class="section-title">Najbliższe godziny · ICON-D2 RUC</h2>
-  <b>Najsilniejszy wiatr:</b> 18.6 kn o 17:00<br><b>Najsilniejsze porywy:</b> 28.5 kn o 17:00
-</div>
 
-<div class="card" style="overflow-x:auto">
-  <h2 class="section-title">ICON-D2 RUC · do +14 h</h2>
-  <table>
-    <thead>
-      <tr><th>Godzina</th><th>Wiatr</th><th>Porywy</th><th>Kierunek</th></tr>
-    </thead>
-    <tbody>
-            <tr style="background:#e9f8df">
-              <td>niedz. 16.08 13:00</td>
-              <td><b>15.4</b> kn</td>
-              <td>24.4 kn</td>
-              <td>WNW 282°</td>
-            </tr>
-            
-            <tr style="background:#fff0c7">
-              <td>niedz. 16.08 14:00</td>
-              <td><b>16.0</b> kn</td>
-              <td>24.7 kn</td>
-              <td>W 280°</td>
-            </tr>
-            
-            <tr style="background:#fff0c7">
-              <td>niedz. 16.08 15:00</td>
-              <td><b>16.7</b> kn</td>
-              <td>25.8 kn</td>
-              <td>WNW 282°</td>
-            </tr>
-            
-            <tr style="background:#fff0c7">
-              <td>niedz. 16.08 16:00</td>
-              <td><b>16.7</b> kn</td>
-              <td>25.5 kn</td>
-              <td>W 277°</td>
-            </tr>
-            
-            <tr style="background:#fff0c7">
-              <td>niedz. 16.08 17:00</td>
-              <td><b>18.6</b> kn</td>
-              <td>28.5 kn</td>
-              <td>W 280°</td>
-            </tr>
-            
-            <tr style="background:#fff0c7">
-              <td>niedz. 16.08 18:00</td>
-              <td><b>17.0</b> kn</td>
-              <td>27.8 kn</td>
-              <td>WNW 284°</td>
-            </tr>
-            
-            <tr style="background:#fff0c7">
-              <td>niedz. 16.08 19:00</td>
-              <td><b>16.7</b> kn</td>
-              <td>25.5 kn</td>
-              <td>W 275°</td>
-            </tr>
-            
-            <tr style="background:#e9f8df">
-              <td>niedz. 16.08 20:00</td>
-              <td><b>14.9</b> kn</td>
-              <td>25.2 kn</td>
-              <td>W 271°</td>
-            </tr>
-            
-            <tr style="background:#e9f8df">
-              <td>niedz. 16.08 21:00</td>
-              <td><b>13.0</b> kn</td>
-              <td>21.2 kn</td>
-              <td>WSW 256°</td>
-            </tr>
-            
-            <tr style="background:#e9f8df">
-              <td>niedz. 16.08 22:00</td>
-              <td><b>12.5</b> kn</td>
-              <td>18.9 kn</td>
-              <td>WSW 250°</td>
-            </tr>
-            
-            <tr style="background:#e9f8df">
-              <td>niedz. 16.08 23:00</td>
-              <td><b>12.4</b> kn</td>
-              <td>18.8 kn</td>
-              <td>WSW 246°</td>
-            </tr>
-            
-            <tr style="background:#e9f8df">
-              <td>pon. 17.08 00:00</td>
-              <td><b>14.6</b> kn</td>
-              <td>21.6 kn</td>
-              <td>WSW 250°</td>
-            </tr>
-            
-            <tr style="background:#e9f8df">
-              <td>pon. 17.08 01:00</td>
-              <td><b>14.2</b> kn</td>
-              <td>21.8 kn</td>
-              <td>WSW 255°</td>
-            </tr>
-            
-            <tr style="background:#e9f8df">
-              <td>pon. 17.08 02:00</td>
-              <td><b>13.4</b> kn</td>
-              <td>20.7 kn</td>
-              <td>WSW 251°</td>
-            </tr>
-            </tbody>
-  </table>
-</div>
+    <section class="day-card">
+      <div class="day-header">
+        <div>
+          <h2>Dzisiaj</h2>
+          <div class="date">16.08.2026</div>
+        </div>
+      </div>
 
-<div class="card summary">
-  <h2 class="section-title">Dalsza prognoza · ICON-D2</h2>
-  <b>Najsilniejszy wiatr:</b> 15.0 kn o 11:00<br><b>Najsilniejsze porywy:</b> 22.5 kn o 11:00
-</div>
+      
+        <div class="day-stats">
+          <div><span>Średnio</span><b>15.4 kn</b></div>
+          <div><span>Maks. wiatr</span><b>18.6 kn · 17:00</b></div>
+          <div><span>Maks. poryw</span><b>28.5 kn o 17:00</b></div>
+        </div>
+        
 
-<div class="card" style="overflow-x:auto">
-  <h2 class="section-title">ICON-D2 · dalszy horyzont do +48 h</h2>
-  <table>
-    <thead>
-      <tr><th>Godzina</th><th>Wiatr</th><th>Porywy</th><th>Kierunek</th></tr>
-    </thead>
-    <tbody>
-            <tr style="background:#e9f8df">
-              <td>pon. 17.08 03:00</td>
-              <td><b>12.8</b> kn</td>
-              <td>19.3 kn</td>
-              <td>WSW 251°</td>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Godz.</th>
+              <th>Wiatr</th>
+              <th>Porywy</th>
+              <th>Kierunek</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+            <tr class="good">
+              <td class="time">13:00</td>
+              <td class="wind">
+                <span class="wind-number">15.4</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">24.4</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WNW</span>
+                <span class="deg">282°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>pon. 17.08 04:00</td>
-              <td><b>11.7</b> kn</td>
-              <td>20.0 kn</td>
-              <td>WSW 254°</td>
+            <tr class="strong">
+              <td class="time">14:00</td>
+              <td class="wind">
+                <span class="wind-number">16.0</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">24.7</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">W</span>
+                <span class="deg">280°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>pon. 17.08 05:00</td>
-              <td><b>12.1</b> kn</td>
-              <td>19.6 kn</td>
-              <td>WSW 249°</td>
+            <tr class="strong">
+              <td class="time">15:00</td>
+              <td class="wind">
+                <span class="wind-number">16.7</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">25.8</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WNW</span>
+                <span class="deg">282°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>pon. 17.08 06:00</td>
-              <td><b>11.6</b> kn</td>
-              <td>20.3 kn</td>
-              <td>W 267°</td>
+            <tr class="strong">
+              <td class="time">16:00</td>
+              <td class="wind">
+                <span class="wind-number">16.7</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">25.5</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">W</span>
+                <span class="deg">277°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>pon. 17.08 07:00</td>
-              <td><b>11.4</b> kn</td>
-              <td>19.3 kn</td>
-              <td>WSW 255°</td>
+            <tr class="strong">
+              <td class="time">17:00</td>
+              <td class="wind">
+                <span class="wind-number">18.6</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">28.5</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">W</span>
+                <span class="deg">280°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>pon. 17.08 08:00</td>
-              <td><b>10.3</b> kn</td>
-              <td>16.8 kn</td>
-              <td>W 259°</td>
+            <tr class="strong">
+              <td class="time">18:00</td>
+              <td class="wind">
+                <span class="wind-number">17.0</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">27.8</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WNW</span>
+                <span class="deg">284°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>pon. 17.08 09:00</td>
-              <td><b>10.6</b> kn</td>
-              <td>16.2 kn</td>
-              <td>WSW 253°</td>
+            <tr class="strong">
+              <td class="time">19:00</td>
+              <td class="wind">
+                <span class="wind-number">16.7</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">25.5</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">W</span>
+                <span class="deg">275°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>pon. 17.08 10:00</td>
-              <td><b>11.2</b> kn</td>
-              <td>17.5 kn</td>
-              <td>WSW 244°</td>
+            <tr class="good">
+              <td class="time">20:00</td>
+              <td class="wind">
+                <span class="wind-number">14.9</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">25.2</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">W</span>
+                <span class="deg">271°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>pon. 17.08 11:00</td>
-              <td><b>10.8</b> kn</td>
-              <td>17.4 kn</td>
-              <td>WSW 256°</td>
+            <tr class="good">
+              <td class="time">21:00</td>
+              <td class="wind">
+                <span class="wind-number">13.0</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">21.2</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WSW</span>
+                <span class="deg">256°</span>
+              </td>
             </tr>
             
-            <tr style="background:#ffffff">
-              <td>pon. 17.08 12:00</td>
-              <td><b>9.7</b> kn</td>
-              <td>16.3 kn</td>
-              <td>WNW 288°</td>
+            <tr class="good">
+              <td class="time">22:00</td>
+              <td class="wind">
+                <span class="wind-number">12.5</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">18.9</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WSW</span>
+                <span class="deg">250°</span>
+              </td>
             </tr>
             
-            <tr style="background:#ffffff">
-              <td>pon. 17.08 13:00</td>
-              <td><b>6.0</b> kn</td>
-              <td>17.7 kn</td>
-              <td>WNW 282°</td>
+            <tr class="good">
+              <td class="time">23:00</td>
+              <td class="wind">
+                <span class="wind-number">12.4</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">18.8</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WSW</span>
+                <span class="deg">246°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>pon. 17.08 14:00</td>
-              <td><b>12.0</b> kn</td>
-              <td>19.1 kn</td>
-              <td>WNW 289°</td>
+          </tbody>
+        </table>
+      </div>
+    </section>
+    
+    <section class="day-card">
+      <div class="day-header">
+        <div>
+          <h2>Jutro</h2>
+          <div class="date">17.08.2026</div>
+        </div>
+      </div>
+
+      
+        <div class="day-stats">
+          <div><span>Średnio</span><b>11.3 kn</b></div>
+          <div><span>Maks. wiatr</span><b>14.6 kn · 00:00</b></div>
+          <div><span>Maks. poryw</span><b>21.8 kn o 01:00</b></div>
+        </div>
+        
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Godz.</th>
+              <th>Wiatr</th>
+              <th>Porywy</th>
+              <th>Kierunek</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+            <tr class="good">
+              <td class="time">00:00</td>
+              <td class="wind">
+                <span class="wind-number">14.6</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">21.6</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WSW</span>
+                <span class="deg">250°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>pon. 17.08 15:00</td>
-              <td><b>12.9</b> kn</td>
-              <td>21.4 kn</td>
-              <td>NW 314°</td>
+            <tr class="good">
+              <td class="time">01:00</td>
+              <td class="wind">
+                <span class="wind-number">14.2</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">21.8</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WSW</span>
+                <span class="deg">255°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>pon. 17.08 16:00</td>
-              <td><b>12.0</b> kn</td>
-              <td>19.3 kn</td>
-              <td>NW 320°</td>
+            <tr class="good">
+              <td class="time">02:00</td>
+              <td class="wind">
+                <span class="wind-number">13.4</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">20.7</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WSW</span>
+                <span class="deg">251°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>pon. 17.08 17:00</td>
-              <td><b>11.6</b> kn</td>
-              <td>18.7 kn</td>
-              <td>NW 316°</td>
+            <tr class="good">
+              <td class="time">03:00</td>
+              <td class="wind">
+                <span class="wind-number">12.8</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">19.3</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WSW</span>
+                <span class="deg">251°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>pon. 17.08 18:00</td>
-              <td><b>13.3</b> kn</td>
-              <td>19.8 kn</td>
-              <td>NW 317°</td>
+            <tr class="light">
+              <td class="time">04:00</td>
+              <td class="wind">
+                <span class="wind-number">11.7</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">20.0</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WSW</span>
+                <span class="deg">254°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>pon. 17.08 19:00</td>
-              <td><b>11.7</b> kn</td>
-              <td>19.9 kn</td>
-              <td>NW 307°</td>
+            <tr class="good">
+              <td class="time">05:00</td>
+              <td class="wind">
+                <span class="wind-number">12.1</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">19.6</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WSW</span>
+                <span class="deg">249°</span>
+              </td>
             </tr>
             
-            <tr style="background:#ffffff">
-              <td>pon. 17.08 20:00</td>
-              <td><b>9.7</b> kn</td>
-              <td>17.1 kn</td>
-              <td>WNW 300°</td>
+            <tr class="light">
+              <td class="time">06:00</td>
+              <td class="wind">
+                <span class="wind-number">11.6</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">20.3</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">W</span>
+                <span class="deg">267°</span>
+              </td>
             </tr>
             
-            <tr style="background:#ffffff">
-              <td>pon. 17.08 21:00</td>
-              <td><b>8.5</b> kn</td>
-              <td>14.0 kn</td>
-              <td>WNW 283°</td>
+            <tr class="light">
+              <td class="time">07:00</td>
+              <td class="wind">
+                <span class="wind-number">11.4</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">19.3</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WSW</span>
+                <span class="deg">255°</span>
+              </td>
             </tr>
             
-            <tr style="background:#ffffff">
-              <td>pon. 17.08 22:00</td>
-              <td><b>8.7</b> kn</td>
-              <td>13.2 kn</td>
-              <td>W 264°</td>
+            <tr class="light">
+              <td class="time">08:00</td>
+              <td class="wind">
+                <span class="wind-number">10.3</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">16.8</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">W</span>
+                <span class="deg">259°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>pon. 17.08 23:00</td>
-              <td><b>10.0</b> kn</td>
-              <td>14.8 kn</td>
-              <td>WSW 256°</td>
+            <tr class="light">
+              <td class="time">09:00</td>
+              <td class="wind">
+                <span class="wind-number">10.6</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">16.2</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WSW</span>
+                <span class="deg">253°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>wt. 18.08 00:00</td>
-              <td><b>10.2</b> kn</td>
-              <td>15.2 kn</td>
-              <td>WSW 258°</td>
+            <tr class="light">
+              <td class="time">10:00</td>
+              <td class="wind">
+                <span class="wind-number">11.2</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">17.5</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WSW</span>
+                <span class="deg">244°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>wt. 18.08 01:00</td>
-              <td><b>10.9</b> kn</td>
-              <td>16.7 kn</td>
-              <td>WSW 257°</td>
+            <tr class="light">
+              <td class="time">11:00</td>
+              <td class="wind">
+                <span class="wind-number">10.8</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">17.4</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WSW</span>
+                <span class="deg">256°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>wt. 18.08 02:00</td>
-              <td><b>10.8</b> kn</td>
-              <td>16.6 kn</td>
-              <td>WSW 257°</td>
+            <tr class="light">
+              <td class="time">12:00</td>
+              <td class="wind">
+                <span class="wind-number">9.7</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">16.3</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WNW</span>
+                <span class="deg">288°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>wt. 18.08 03:00</td>
-              <td><b>11.3</b> kn</td>
-              <td>16.7 kn</td>
-              <td>WSW 257°</td>
+            <tr class="calm">
+              <td class="time">13:00</td>
+              <td class="wind">
+                <span class="wind-number">6.0</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">17.7</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WNW</span>
+                <span class="deg">282°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>wt. 18.08 04:00</td>
-              <td><b>13.2</b> kn</td>
-              <td>19.2 kn</td>
-              <td>WSW 258°</td>
+            <tr class="good">
+              <td class="time">14:00</td>
+              <td class="wind">
+                <span class="wind-number">12.0</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">19.1</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WNW</span>
+                <span class="deg">289°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>wt. 18.08 05:00</td>
-              <td><b>13.2</b> kn</td>
-              <td>20.0 kn</td>
-              <td>W 266°</td>
+            <tr class="good">
+              <td class="time">15:00</td>
+              <td class="wind">
+                <span class="wind-number">12.9</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">21.4</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">NW</span>
+                <span class="deg">314°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>wt. 18.08 06:00</td>
-              <td><b>11.5</b> kn</td>
-              <td>19.4 kn</td>
-              <td>W 269°</td>
+            <tr class="good">
+              <td class="time">16:00</td>
+              <td class="wind">
+                <span class="wind-number">12.0</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">19.3</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">NW</span>
+                <span class="deg">320°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>wt. 18.08 07:00</td>
-              <td><b>11.1</b> kn</td>
-              <td>16.9 kn</td>
-              <td>W 272°</td>
+            <tr class="light">
+              <td class="time">17:00</td>
+              <td class="wind">
+                <span class="wind-number">11.6</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">18.7</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">NW</span>
+                <span class="deg">316°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>wt. 18.08 08:00</td>
-              <td><b>11.7</b> kn</td>
-              <td>17.5 kn</td>
-              <td>W 274°</td>
+            <tr class="good">
+              <td class="time">18:00</td>
+              <td class="wind">
+                <span class="wind-number">13.3</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">19.8</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">NW</span>
+                <span class="deg">317°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>wt. 18.08 09:00</td>
-              <td><b>12.3</b> kn</td>
-              <td>18.6 kn</td>
-              <td>W 279°</td>
+            <tr class="light">
+              <td class="time">19:00</td>
+              <td class="wind">
+                <span class="wind-number">11.7</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">19.9</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">NW</span>
+                <span class="deg">307°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>wt. 18.08 10:00</td>
-              <td><b>12.6</b> kn</td>
-              <td>19.8 kn</td>
-              <td>WNW 294°</td>
+            <tr class="light">
+              <td class="time">20:00</td>
+              <td class="wind">
+                <span class="wind-number">9.7</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">17.1</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WNW</span>
+                <span class="deg">300°</span>
+              </td>
             </tr>
             
-            <tr style="background:#e9f8df">
-              <td>wt. 18.08 11:00</td>
-              <td><b>15.0</b> kn</td>
-              <td>22.5 kn</td>
-              <td>WNW 300°</td>
+            <tr class="light">
+              <td class="time">21:00</td>
+              <td class="wind">
+                <span class="wind-number">8.5</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">14.0</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WNW</span>
+                <span class="deg">283°</span>
+              </td>
             </tr>
-            </tbody>
-  </table>
-</div>
+            
+            <tr class="light">
+              <td class="time">22:00</td>
+              <td class="wind">
+                <span class="wind-number">8.7</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">13.2</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">W</span>
+                <span class="deg">264°</span>
+              </td>
+            </tr>
+            
+            <tr class="light">
+              <td class="time">23:00</td>
+              <td class="wind">
+                <span class="wind-number">10.0</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">14.8</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WSW</span>
+                <span class="deg">256°</span>
+              </td>
+            </tr>
+            
+          </tbody>
+        </table>
+      </div>
+    </section>
+    
+    <section class="day-card">
+      <div class="day-header">
+        <div>
+          <h2>Pojutrze</h2>
+          <div class="date">18.08.2026</div>
+        </div>
+      </div>
+
+      
+        <div class="day-stats">
+          <div><span>Średnio</span><b>12.0 kn</b></div>
+          <div><span>Maks. wiatr</span><b>15.0 kn · 11:00</b></div>
+          <div><span>Maks. poryw</span><b>22.5 kn o 11:00</b></div>
+        </div>
+        
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Godz.</th>
+              <th>Wiatr</th>
+              <th>Porywy</th>
+              <th>Kierunek</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+            <tr class="light">
+              <td class="time">00:00</td>
+              <td class="wind">
+                <span class="wind-number">10.2</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">15.2</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WSW</span>
+                <span class="deg">258°</span>
+              </td>
+            </tr>
+            
+            <tr class="light">
+              <td class="time">01:00</td>
+              <td class="wind">
+                <span class="wind-number">10.9</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">16.7</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WSW</span>
+                <span class="deg">257°</span>
+              </td>
+            </tr>
+            
+            <tr class="light">
+              <td class="time">02:00</td>
+              <td class="wind">
+                <span class="wind-number">10.8</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">16.6</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WSW</span>
+                <span class="deg">257°</span>
+              </td>
+            </tr>
+            
+            <tr class="light">
+              <td class="time">03:00</td>
+              <td class="wind">
+                <span class="wind-number">11.3</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">16.7</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WSW</span>
+                <span class="deg">257°</span>
+              </td>
+            </tr>
+            
+            <tr class="good">
+              <td class="time">04:00</td>
+              <td class="wind">
+                <span class="wind-number">13.2</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">19.2</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WSW</span>
+                <span class="deg">258°</span>
+              </td>
+            </tr>
+            
+            <tr class="good">
+              <td class="time">05:00</td>
+              <td class="wind">
+                <span class="wind-number">13.2</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">20.0</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">W</span>
+                <span class="deg">266°</span>
+              </td>
+            </tr>
+            
+            <tr class="light">
+              <td class="time">06:00</td>
+              <td class="wind">
+                <span class="wind-number">11.5</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">19.4</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">W</span>
+                <span class="deg">269°</span>
+              </td>
+            </tr>
+            
+            <tr class="light">
+              <td class="time">07:00</td>
+              <td class="wind">
+                <span class="wind-number">11.1</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">16.9</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">W</span>
+                <span class="deg">272°</span>
+              </td>
+            </tr>
+            
+            <tr class="light">
+              <td class="time">08:00</td>
+              <td class="wind">
+                <span class="wind-number">11.7</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">17.5</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">W</span>
+                <span class="deg">274°</span>
+              </td>
+            </tr>
+            
+            <tr class="good">
+              <td class="time">09:00</td>
+              <td class="wind">
+                <span class="wind-number">12.3</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">18.6</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">W</span>
+                <span class="deg">279°</span>
+              </td>
+            </tr>
+            
+            <tr class="good">
+              <td class="time">10:00</td>
+              <td class="wind">
+                <span class="wind-number">12.6</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">19.8</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WNW</span>
+                <span class="deg">294°</span>
+              </td>
+            </tr>
+            
+            <tr class="good">
+              <td class="time">11:00</td>
+              <td class="wind">
+                <span class="wind-number">15.0</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="gust">
+                <span class="gust-number">22.5</span>
+                <span class="unit">kn</span>
+              </td>
+              <td class="dir">
+                <span class="dir-main">WNW</span>
+                <span class="deg">300°</span>
+              </td>
+            </tr>
+            
+          </tbody>
+        </table>
+      </div>
+    </section>
+    
 
 </main>
 
 <footer>
-Dane: Deutscher Wetterdienst (DWD) · ICON-D2 RUC + ICON-D2
+  Dane: Deutscher Wetterdienst (DWD) · punkt docelowy 54.696°N, 18.678°E
 </footer>
+
 </body>
 </html>
